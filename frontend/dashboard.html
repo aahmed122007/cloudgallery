@@ -8,19 +8,56 @@
 </head>
 <body>
     <div class="app-layout">
-        <nav class="sidebar"></nav>
+        <nav class="sidebar" id="sidebar"></nav>
         <main class="main">
-            <div class="topbar"></div>
-            <h2 style="margin-bottom:16px;">Recent Uploads</h2>
+            <div id="topbar-slot"></div>
+
+            <!-- Stats -->
+            <div class="stats-bar" id="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon purple">📷</div>
+                    <div>
+                        <div class="stat-label">Total Uploads</div>
+                        <div class="stat-value" id="stat-uploads">—</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue">👥</div>
+                    <div>
+                        <div class="stat-label">My Photos</div>
+                        <div class="stat-value" id="stat-mine">—</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">❤️</div>
+                    <div>
+                        <div class="stat-label">Total Likes</div>
+                        <div class="stat-value" id="stat-likes">—</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink">🤖</div>
+                    <div>
+                        <div class="stat-label">AI Tags</div>
+                        <div class="stat-value" id="stat-ai">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h2>Recent Media</h2>
+                <a href="upload.html" class="btn btn-primary" style="padding:8px 16px;font-size:13px;">+ Upload</a>
+            </div>
+
             <div id="grid" class="grid"></div>
             <div id="empty" class="empty-state hidden">
-                <div class="icon">📷</div>
-                <p>No media yet. Be the first to upload!</p>
-                <a href="upload.html" class="btn btn-primary" style="margin-top:12px;">Upload your first media</a>
+                <div class="es-icon">📷</div>
+                <h3>No media yet</h3>
+                <p>Be the first to upload something amazing</p>
+                <a href="upload.html" class="btn btn-primary" style="margin-top:16px;">Upload your first photo</a>
             </div>
         </main>
     </div>
-
     <div id="modal-backdrop" class="modal-backdrop"></div>
 
     <script src="js/config.js"></script>
@@ -30,18 +67,25 @@
     <script>
         Auth.requireLogin();
         UI.renderSidebar("home");
-        UI.renderTopbar("Dashboard");
+        UI.renderTopbar("Dashboard", "Welcome back 👋");
 
         async function loadFeed() {
             try {
-                const { items } = await API.listMedia(null, 30);
+                const { items } = await API.listMedia(null, 50);
                 const grid = document.getElementById("grid");
                 const empty = document.getElementById("empty");
                 grid.innerHTML = "";
-                if (!items.length) {
-                    empty.classList.remove("hidden");
-                    return;
-                }
+
+                const user = Auth.user();
+                const mine = items.filter(m => m.userId === user.userId);
+                const totalLikes = items.reduce((s, m) => s + (m.likes || 0), 0);
+                const totalAI = items.reduce((s, m) => s + (m.aiTags || []).length, 0);
+                document.getElementById("stat-uploads").textContent = items.length;
+                document.getElementById("stat-mine").textContent = mine.length;
+                document.getElementById("stat-likes").textContent = totalLikes;
+                document.getElementById("stat-ai").textContent = totalAI;
+
+                if (!items.length) { empty.classList.remove("hidden"); return; }
                 empty.classList.add("hidden");
                 items.forEach(m => grid.appendChild(UI.mediaCard(m, UI.showModal.bind(UI))));
             } catch (err) {

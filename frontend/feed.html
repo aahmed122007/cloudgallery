@@ -3,25 +3,29 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Feed — CloudGallery</title>
+    <title>Explore — CloudGallery</title>
     <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
     <div class="app-layout">
-        <nav class="sidebar"></nav>
+        <nav class="sidebar" id="sidebar"></nav>
         <main class="main">
-            <div class="topbar"></div>
+            <div id="topbar-slot"></div>
 
-            <div id="search-info" class="hidden" style="margin-bottom:16px;color:var(--text-muted);"></div>
+            <div id="search-banner" class="hidden" style="background:var(--primary-light);border:1.5px solid #c7d2fe;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;font-size:14px;color:var(--primary-dark);font-weight:500;"></div>
+
+            <div class="section-header">
+                <h2 id="section-title">All Media</h2>
+            </div>
 
             <div id="grid" class="grid"></div>
             <div id="empty" class="empty-state hidden">
-                <div class="icon">🔍</div>
-                <p id="empty-msg">No media found.</p>
+                <div class="es-icon">🔍</div>
+                <h3>Nothing found</h3>
+                <p id="empty-msg">Try a different search term or tag.</p>
             </div>
         </main>
     </div>
-
     <div id="modal-backdrop" class="modal-backdrop"></div>
 
     <script src="js/config.js"></script>
@@ -31,7 +35,7 @@
     <script>
         Auth.requireLogin();
         UI.renderSidebar("feed");
-        UI.renderTopbar("Feed");
+        UI.renderTopbar("Explore", "Browse all media");
 
         const params = new URLSearchParams(window.location.search);
         const query = params.get("q");
@@ -40,41 +44,37 @@
         async function load() {
             const grid = document.getElementById("grid");
             const empty = document.getElementById("empty");
-            const info = document.getElementById("search-info");
+            const banner = document.getElementById("search-banner");
+            const title = document.getElementById("section-title");
             grid.innerHTML = "";
 
             try {
                 let items = [];
                 if (query || tag) {
-                    info.classList.remove("hidden");
-                    info.textContent = query
-                        ? `Search results for "${query}"`
-                        : `Showing media tagged "${tag}"`;
+                    banner.classList.remove("hidden");
+                    banner.textContent = query ? `🔍 Results for "${query}"` : `🏷️ Showing tag: "${tag}"`;
+                    title.textContent = query ? `Search: ${query}` : `Tag: ${tag}`;
                     const res = await API.searchMedia({ q: query, tag });
                     items = res.items;
                 } else {
                     const res = await API.listMedia(null, 100);
                     items = res.items;
                 }
-
                 if (!items.length) {
                     empty.classList.remove("hidden");
                     document.getElementById("empty-msg").textContent = (query || tag)
-                        ? "No results match your search."
-                        : "No media yet — be the first to upload!";
+                        ? "No media matches your search. Try another keyword."
+                        : "No media uploaded yet — be the first!";
                     return;
                 }
                 empty.classList.add("hidden");
                 items.forEach(m => grid.appendChild(UI.mediaCard(m, UI.showModal.bind(UI))));
-            } catch (err) {
-                UI.toast(err.message, "error");
-            }
+            } catch (err) { UI.toast(err.message, "error"); }
         }
 
         load();
         document.addEventListener("media-updated", load);
 
-        // Pre-fill the search box with the current query
         setTimeout(() => {
             if (query) {
                 const input = document.getElementById("global-search");

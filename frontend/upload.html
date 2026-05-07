@@ -8,35 +8,41 @@
 </head>
 <body>
     <div class="app-layout">
-        <nav class="sidebar"></nav>
+        <nav class="sidebar" id="sidebar"></nav>
         <main class="main">
-            <div class="topbar"></div>
+            <div id="topbar-slot"></div>
+
+            <div class="page-header">
+                <h1>Upload Media</h1>
+                <p>Share your photos and videos with the community</p>
+            </div>
 
             <div class="upload-card">
-                <h2 style="margin-bottom:20px;">Upload Media</h2>
-
                 <div id="drop-zone" class="drop-zone">
-                    <div class="icon">☁️⬆️</div>
-                    <p><strong>Click to choose a file</strong> or drag &amp; drop here</p>
-                    <p style="font-size:12px;margin-top:4px;">Images (JPG, PNG, GIF, WebP) up to 10 MB</p>
+                    <div class="dz-icon">📂</div>
+                    <h3>Drop your file here</h3>
+                    <p>or <strong>click to browse</strong> — JPG, PNG, GIF, WebP, MP4 · max 10 MB</p>
                     <img id="preview" class="preview hidden" />
                 </div>
                 <input type="file" id="file-input" accept="image/*,video/*" class="hidden" />
 
                 <form id="upload-form">
                     <div class="form-group">
-                        <label for="title">Title *</label>
-                        <input type="text" id="title" maxlength="200" required />
+                        <label>Title *</label>
+                        <input type="text" id="title" placeholder="Give your photo a title" maxlength="200" required />
                     </div>
                     <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" rows="3" maxlength="1000"></textarea>
+                        <label>Description</label>
+                        <textarea id="description" rows="3" placeholder="Tell us about this photo..." maxlength="1000"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="tags">Tags <small style="color:var(--text-muted);font-weight:normal;">(comma separated)</small></label>
-                        <input type="text" id="tags" placeholder="travel, beach, sunset" />
+                        <label>Tags <span style="font-weight:400;text-transform:none;font-size:12px;color:var(--text-muted)">(comma separated)</span></label>
+                        <input type="text" id="tags" placeholder="e.g. travel, nature, sunset" />
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block" id="submit-btn">Upload</button>
+                    <div style="display:flex;gap:12px;">
+                        <button type="submit" class="btn btn-primary" id="submit-btn" style="flex:1;">Upload Photo</button>
+                        <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
+                    </div>
                 </form>
             </div>
         </main>
@@ -49,7 +55,7 @@
     <script>
         Auth.requireLogin();
         UI.renderSidebar("upload");
-        UI.renderTopbar("Upload");
+        UI.renderTopbar("Upload", "Share something new");
 
         const dropZone = document.getElementById("drop-zone");
         const fileInput = document.getElementById("file-input");
@@ -59,54 +65,40 @@
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = () => selectFile(fileInput.files[0]);
 
-        dropZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            dropZone.classList.add("drag-over");
-        });
+        dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag-over"); });
         dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
         dropZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            dropZone.classList.remove("drag-over");
+            e.preventDefault(); dropZone.classList.remove("drag-over");
             if (e.dataTransfer.files.length) selectFile(e.dataTransfer.files[0]);
         });
 
         function selectFile(file) {
             if (!file) return;
-            if (file.size > 10 * 1024 * 1024) {
-                UI.toast("File too large (max 10 MB)", "error");
-                return;
-            }
+            if (file.size > 10 * 1024 * 1024) { UI.toast("File too large (max 10 MB)", "error"); return; }
             selectedFile = file;
             const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.src = e.target.result;
-                preview.classList.remove("hidden");
-            };
+            reader.onload = (e) => { preview.src = e.target.result; preview.classList.remove("hidden"); };
             reader.readAsDataURL(file);
+            dropZone.querySelector("h3").textContent = file.name;
         }
 
         document.getElementById("upload-form").addEventListener("submit", async (e) => {
             e.preventDefault();
-            if (!selectedFile) {
-                UI.toast("Please choose a file first", "error");
-                return;
-            }
-            const title = document.getElementById("title").value.trim();
-            const description = document.getElementById("description").value.trim();
-            const tags = document.getElementById("tags").value.trim();
-
+            if (!selectedFile) { UI.toast("Please choose a file first", "error"); return; }
             const btn = document.getElementById("submit-btn");
-            btn.disabled = true;
-            btn.textContent = "Uploading...";
-
+            btn.disabled = true; btn.textContent = "Uploading...";
             try {
-                await API.uploadMedia(selectedFile, title, description, tags);
-                UI.toast("Upload successful!", "success");
-                setTimeout(() => window.location.href = "dashboard.html", 600);
+                await API.uploadMedia(
+                    selectedFile,
+                    document.getElementById("title").value.trim(),
+                    document.getElementById("description").value.trim(),
+                    document.getElementById("tags").value.trim()
+                );
+                UI.toast("Uploaded! AI tagging running in background…", "success");
+                setTimeout(() => window.location.href = "dashboard.html", 800);
             } catch (err) {
                 UI.toast(err.message, "error");
-                btn.disabled = false;
-                btn.textContent = "Upload";
+                btn.disabled = false; btn.textContent = "Upload Photo";
             }
         });
     </script>

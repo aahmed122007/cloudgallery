@@ -1,7 +1,3 @@
-/**
- * Shared UI helpers used across all pages.
- */
-
 const UI = {
     toast(message, type = "info") {
         let el = document.querySelector(".toast");
@@ -10,65 +6,91 @@ const UI = {
             el.className = "toast";
             document.body.appendChild(el);
         }
-        el.textContent = message;
+        const icons = { success: "✓", error: "✕", info: "ℹ" };
+        el.innerHTML = `<span>${icons[type] || "ℹ"}</span> ${this.escape(message)}`;
         el.className = `toast ${type} show`;
-        setTimeout(() => el.classList.remove("show"), 3000);
+        clearTimeout(el._t);
+        el._t = setTimeout(() => el.classList.remove("show"), 3500);
     },
 
     initials(name) {
-        return (name || "?")
-            .split(" ")
-            .map(n => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
+        return (name || "?").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     },
 
     formatDate(iso) {
         if (!iso) return "";
         const d = new Date(iso);
-        const now = Date.now();
-        const diff = (now - d.getTime()) / 1000;
+        const diff = (Date.now() - d.getTime()) / 1000;
         if (diff < 60) return "just now";
-        if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-        if (diff < 604800) return `${Math.floor(diff/86400)}d ago`;
-        return d.toLocaleDateString();
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+        return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
     },
 
     renderSidebar(active) {
         const user = Auth.user();
-        const html = `
-            <div class="logo">☁️ CloudGallery</div>
-            <a href="dashboard.html" class="nav-item ${active === 'home' ? 'active' : ''}">🏠 Home</a>
-            <a href="upload.html" class="nav-item ${active === 'upload' ? 'active' : ''}">⬆️ Upload</a>
-            <a href="feed.html" class="nav-item ${active === 'feed' ? 'active' : ''}">📰 Feed</a>
-            <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">👤 Profile</a>
-            <a href="#" class="nav-item" onclick="Auth.logout(); return false;">🚪 Logout</a>
+        const nav = [
+            { id: "home",    href: "dashboard.html", icon: "🏠", label: "Dashboard" },
+            { id: "feed",    href: "feed.html",      icon: "🌐", label: "Explore" },
+            { id: "upload",  href: "upload.html",    icon: "⬆️",  label: "Upload" },
+            { id: "profile", href: "profile.html",   icon: "👤", label: "Profile" },
+        ];
+        const navHtml = nav.map(n => `
+            <a href="${n.href}" class="nav-item ${active === n.id ? "active" : ""}">
+                <span class="nav-icon">${n.icon}</span> ${n.label}
+            </a>
+        `).join("");
+
+        const sidebar = document.getElementById("sidebar") || document.querySelector(".sidebar");
+        if (!sidebar) return;
+        sidebar.innerHTML = `
+            <div class="logo">
+                <div class="logo-icon">☁️</div>
+                CloudGallery
+            </div>
+            <div class="nav-section">
+                <div class="nav-label">Menu</div>
+                ${navHtml}
+            </div>
+            <div class="sidebar-footer">
+                <div class="sidebar-user" onclick="Auth.logout()">
+                    <div class="avatar-sm">${this.initials(user?.name)}</div>
+                    <div class="user-info">
+                        <div class="user-name">${this.escape(user?.name || "")}</div>
+                        <div class="user-role">Sign out</div>
+                    </div>
+                </div>
+            </div>
         `;
-        document.querySelector(".sidebar").innerHTML = html;
     },
 
-    renderTopbar(title) {
-        const user = Auth.user();
-        const el = document.querySelector(".topbar");
-        if (!el) return;
-        el.innerHTML = `
-            <h1>${title}</h1>
-            <div class="search">
-                <input type="text" id="global-search" placeholder="Search by title, description, or tag..." />
-            </div>
-            <div class="user-chip">
-                <div class="avatar">${this.initials(user?.name)}</div>
-                <span>${user?.name || ""}</span>
+    renderTopbar(title, subtitle) {
+        const slot = document.getElementById("topbar-slot");
+        if (!slot) return;
+        slot.innerHTML = `
+            <div class="topbar">
+                <div class="topbar-left">
+                    <h1>${title}</h1>
+                    ${subtitle ? `<p>${subtitle}</p>` : ""}
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="global-search" placeholder="Search photos, tags..." />
+                </div>
+                <div class="topbar-right">
+                    <a href="upload.html" class="upload-btn">⬆️ Upload</a>
+                </div>
             </div>
         `;
         const input = document.getElementById("global-search");
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" && input.value.trim()) {
-                window.location.href = `feed.html?q=${encodeURIComponent(input.value.trim())}`;
-            }
-        });
+        if (input) {
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && input.value.trim()) {
+                    window.location.href = `feed.html?q=${encodeURIComponent(input.value.trim())}`;
+                }
+            });
+        }
     },
 
     mediaCard(media, onClick) {
@@ -76,30 +98,36 @@ const UI = {
         const card = document.createElement("div");
         card.className = "media-card";
         card.onclick = () => onClick(media);
+        const allTags = [
+            ...(media.tags || []).slice(0, 2).map(t => `<span class="tag">${this.escape(t)}</span>`),
+            ...(media.aiTags || []).slice(0, 1).map(t => `<span class="tag ai-tag">🤖 ${this.escape(t)}</span>`)
+        ].join("");
         card.innerHTML = `
-            ${isImage
-                ? `<img class="thumb" src="${media.blobUrl}" alt="${media.title}" loading="lazy" onerror="this.style.background='#eee';this.src='';" />`
-                : `<video class="thumb" src="${media.blobUrl}" muted></video>`
-            }
+            <div class="thumb-wrap">
+                ${isImage
+                    ? `<img class="thumb" src="${media.blobUrl}" alt="${this.escape(media.title)}" loading="lazy" onerror="this.parentElement.style.background='#e2e8f0'" />`
+                    : `<video class="thumb" src="${media.blobUrl}" muted></video>`
+                }
+                <div class="thumb-overlay">
+                    <div class="overlay-likes">❤️ ${media.likes || 0}</div>
+                </div>
+            </div>
             <div class="body">
                 <div class="title">${this.escape(media.title)}</div>
                 <div class="meta">
                     <span>@${this.escape(media.userName || "user")}</span>
-                    <span>❤️ ${media.likes || 0}</span>
+                    <span style="color:var(--text-muted)">${this.formatDate(media.uploadTime)}</span>
                 </div>
-                <div class="tags">
-                    ${(media.tags || []).slice(0, 3).map(t => `<span class="tag">${this.escape(t)}</span>`).join("")}
-                    ${(media.aiTags || []).slice(0, 2).map(t => `<span class="tag ai-tag">AI: ${this.escape(t)}</span>`).join("")}
-                </div>
+                <div class="tags">${allTags}</div>
             </div>
         `;
         return card;
     },
 
     escape(s) {
-        const div = document.createElement("div");
-        div.textContent = s == null ? "" : String(s);
-        return div.innerHTML;
+        const d = document.createElement("div");
+        d.textContent = s == null ? "" : String(s);
+        return d.innerHTML;
     },
 
     showModal(media) {
@@ -107,45 +135,72 @@ const UI = {
         const liked = (media.likedBy || []).includes(me?.userId);
         const backdrop = document.getElementById("modal-backdrop");
         backdrop.classList.add("show");
+
+        const allTags = [
+            ...(media.tags || []).map(t => `<span class="tag">${this.escape(t)}</span>`),
+            ...(media.aiTags || []).map(t => `<span class="tag ai-tag">🤖 ${this.escape(t)}</span>`)
+        ].join("");
+
+        const commentsHtml = (media.comments || []).map(c => `
+            <div class="comment">
+                <div class="c-avatar">${this.initials(c.user)}</div>
+                <div class="c-body">
+                    <div class="c-author">${this.escape(c.user)}</div>
+                    <div class="c-text">${this.escape(c.text)}</div>
+                </div>
+            </div>
+        `).join("") || `<p style="color:var(--text-muted);font-size:13px;padding:8px 0">No comments yet.</p>`;
+
+        const isImage = media.type === "image" || (media.blobUrl || "").match(/\.(jpg|jpeg|png|gif|webp)$/i);
+
         backdrop.innerHTML = `
             <div class="modal">
                 <button class="close" onclick="document.getElementById('modal-backdrop').classList.remove('show')">✕</button>
-                <img src="${media.blobUrl}" alt="${media.title}" />
-                <div class="details">
-                    <h2>${this.escape(media.title)}</h2>
-                    <div class="author">by @${this.escape(media.userName)} · ${this.formatDate(media.uploadTime)}</div>
-                    <p>${this.escape(media.description || "")}</p>
-                    <div class="tags" style="margin-top:12px;">
-                        ${(media.tags || []).map(t => `<span class="tag">${this.escape(t)}</span>`).join("")}
-                        ${(media.aiTags || []).map(t => `<span class="tag ai-tag">AI: ${this.escape(t)}</span>`).join("")}
+                <div class="modal-media">
+                    ${isImage
+                        ? `<img src="${media.blobUrl}" alt="${this.escape(media.title)}" />`
+                        : `<video src="${media.blobUrl}" controls style="width:100%;max-height:92vh"></video>`
+                    }
+                </div>
+                <div class="modal-info">
+                    <div class="modal-header">
+                        <h2>${this.escape(media.title)}</h2>
+                        <div class="author">
+                            <span>by <strong>@${this.escape(media.userName)}</strong></span>
+                            <span>· ${this.formatDate(media.uploadTime)}</span>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        ${media.description ? `<p class="description">${this.escape(media.description)}</p>` : ""}
+                        <div class="tags" style="gap:5px">${allTags}</div>
                     </div>
                     <div class="action-bar">
-                        <button class="${liked ? 'liked' : ''}" onclick="handleLike('${media.mediaId}')">
-                            ${liked ? '❤️' : '🤍'} ${media.likes || 0}
+                        <button class="action-btn ${liked ? "liked" : ""}" onclick="handleLike('${media.mediaId}')">
+                            ${liked ? "❤️" : "🤍"} ${media.likes || 0} ${media.likes === 1 ? "like" : "likes"}
+                        </button>
+                        <button class="action-btn" onclick="document.getElementById('new-comment').focus()">
+                            💬 ${(media.comments || []).length}
                         </button>
                         ${media.userId === me?.userId
-                            ? `<button onclick="handleDelete('${media.mediaId}')" style="color:var(--danger)">🗑️ Delete</button>`
+                            ? `<button class="action-btn danger" onclick="handleDelete('${media.mediaId}')">🗑️ Delete</button>`
                             : ""}
                     </div>
-                    <div id="comments">
-                        ${(media.comments || []).map(c => `
-                            <div class="comment">
-                                <div class="author">${this.escape(c.user)}</div>
-                                <div class="text">${this.escape(c.text)}</div>
-                            </div>
-                        `).join("")}
+                    <div class="comments-area">
+                        <div class="comments-title">Comments</div>
+                        <div id="comments-list">${commentsHtml}</div>
                     </div>
-                    <div class="form-group" style="margin-top:12px;">
-                        <input id="new-comment" placeholder="Add a comment..." />
+                    <div class="comment-input-row">
+                        <input id="new-comment" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')handleComment('${media.mediaId}')" />
+                        <button onclick="handleComment('${media.mediaId}')">Post</button>
                     </div>
-                    <button class="btn btn-primary" onclick="handleComment('${media.mediaId}')">Post comment</button>
                 </div>
             </div>
         `;
+
+        backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.classList.remove("show"); };
     }
 };
 
-// Modal action handlers (global so inline onclick works)
 async function handleLike(mediaId) {
     try {
         const updated = await API.toggleLike(mediaId);
@@ -165,11 +220,11 @@ async function handleComment(mediaId) {
 }
 
 async function handleDelete(mediaId) {
-    if (!confirm("Delete this media permanently?")) return;
+    if (!confirm("Delete this photo permanently?")) return;
     try {
         await API.deleteMedia(mediaId);
         document.getElementById("modal-backdrop").classList.remove("show");
-        UI.toast("Deleted", "success");
+        UI.toast("Photo deleted", "success");
         document.dispatchEvent(new CustomEvent("media-updated"));
     } catch (err) { UI.toast(err.message, "error"); }
 }

@@ -8,29 +8,37 @@
 </head>
 <body>
     <div class="app-layout">
-        <nav class="sidebar"></nav>
+        <nav class="sidebar" id="sidebar"></nav>
         <main class="main">
-            <div class="topbar"></div>
+            <div id="topbar-slot"></div>
 
-            <div class="profile-header">
-                <div id="avatar" class="avatar-lg"></div>
+            <div class="profile-banner">
+                <div id="avatar" class="profile-avatar-lg"></div>
                 <div class="profile-info">
                     <h2 id="user-name"></h2>
                     <p id="user-email"></p>
-                    <p id="user-joined"></p>
+                    <div class="profile-stats">
+                        <div class="pstat"><div class="pstat-value" id="pstat-uploads">—</div><div class="pstat-label">Uploads</div></div>
+                        <div class="pstat"><div class="pstat-value" id="pstat-likes">—</div><div class="pstat-label">Likes</div></div>
+                        <div class="pstat"><div class="pstat-value" id="pstat-joined">—</div><div class="pstat-label">Member since</div></div>
+                    </div>
                 </div>
             </div>
 
-            <h3 style="margin-bottom:16px;">My Media</h3>
+            <div class="section-header">
+                <h2>My Media</h2>
+                <a href="upload.html" class="btn btn-primary" style="padding:8px 16px;font-size:13px;">+ Upload</a>
+            </div>
+
             <div id="grid" class="grid"></div>
             <div id="empty" class="empty-state hidden">
-                <div class="icon">🖼️</div>
-                <p>You haven't uploaded any media yet.</p>
-                <a href="upload.html" class="btn btn-primary" style="margin-top:12px;">Upload media</a>
+                <div class="es-icon">🖼️</div>
+                <h3>No uploads yet</h3>
+                <p>Share your first photo with the community</p>
+                <a href="upload.html" class="btn btn-primary" style="margin-top:16px;">Upload now</a>
             </div>
         </main>
     </div>
-
     <div id="modal-backdrop" class="modal-backdrop"></div>
 
     <script src="js/config.js"></script>
@@ -40,7 +48,7 @@
     <script>
         Auth.requireLogin();
         UI.renderSidebar("profile");
-        UI.renderTopbar("My Profile");
+        UI.renderTopbar("My Profile", "Manage your account");
 
         const user = Auth.user();
         document.getElementById("avatar").textContent = UI.initials(user.name);
@@ -50,24 +58,24 @@
         async function loadProfile() {
             try {
                 const details = await API.getUser(user.userId);
-                document.getElementById("user-joined").textContent =
-                    `Member since ${new Date(details.createdDate).toLocaleDateString()}`;
-            } catch (e) { /* silent */ }
+                const d = new Date(details.createdDate);
+                document.getElementById("pstat-joined").textContent =
+                    d.toLocaleString("default", { month: "short", year: "numeric" });
+            } catch (e) {}
 
             try {
                 const { items } = await API.listMedia(user.userId, 100);
+                const totalLikes = items.reduce((s, m) => s + (m.likes || 0), 0);
+                document.getElementById("pstat-uploads").textContent = items.length;
+                document.getElementById("pstat-likes").textContent = totalLikes;
+
                 const grid = document.getElementById("grid");
                 const empty = document.getElementById("empty");
                 grid.innerHTML = "";
-                if (!items.length) {
-                    empty.classList.remove("hidden");
-                    return;
-                }
+                if (!items.length) { empty.classList.remove("hidden"); return; }
                 empty.classList.add("hidden");
                 items.forEach(m => grid.appendChild(UI.mediaCard(m, UI.showModal.bind(UI))));
-            } catch (err) {
-                UI.toast(err.message, "error");
-            }
+            } catch (err) { UI.toast(err.message, "error"); }
         }
 
         loadProfile();
