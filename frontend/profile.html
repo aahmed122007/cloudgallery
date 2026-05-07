@@ -15,7 +15,15 @@
             <div class="profile-banner">
                 <div id="avatar" class="profile-avatar-lg"></div>
                 <div class="profile-info">
-                    <h2 id="user-name"></h2>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <h2 id="user-name"></h2>
+                        <button onclick="toggleNameEdit()" style="background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.4);color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">✏️ Edit</button>
+                    </div>
+                    <div id="name-edit-form" style="display:none;align-items:center;gap:8px;margin:8px 0">
+                        <input id="new-name" style="padding:7px 10px;border:1.5px solid rgba(255,255,255,0.4);border-radius:6px;background:rgba(255,255,255,0.15);color:#fff;font-size:14px;width:180px" placeholder="Your name" />
+                        <button onclick="saveNameEdit()" style="background:#fff;color:var(--primary);border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Save</button>
+                        <button onclick="toggleNameEdit()" style="background:none;border:1.5px solid rgba(255,255,255,0.4);color:#fff;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px">Cancel</button>
+                    </div>
                     <p id="user-email"></p>
                     <div class="profile-stats">
                         <div class="pstat"><div class="pstat-value" id="pstat-uploads">—</div><div class="pstat-label">Uploads</div></div>
@@ -50,10 +58,34 @@
         UI.renderSidebar("profile");
         UI.renderTopbar("My Profile", "Manage your account");
 
-        const user = Auth.user();
+        let user = Auth.user();
         document.getElementById("avatar").textContent = UI.initials(user.name);
         document.getElementById("user-name").textContent = user.name;
         document.getElementById("user-email").textContent = user.email;
+
+        function toggleNameEdit() {
+            const form = document.getElementById("name-edit-form");
+            if (form.style.display === "none" || !form.style.display) {
+                document.getElementById("new-name").value = user.name;
+                form.style.display = "flex";
+            } else {
+                form.style.display = "none";
+            }
+        }
+
+        async function saveNameEdit() {
+            const newName = document.getElementById("new-name").value.trim();
+            if (!newName) { UI.toast("Name cannot be empty", "error"); return; }
+            try {
+                await API.updateUser(user.userId, { name: newName });
+                document.getElementById("user-name").textContent = newName;
+                document.getElementById("avatar").textContent = UI.initials(newName);
+                user = { ...user, name: newName };
+                Auth.save(Auth.token(), user);
+                toggleNameEdit();
+                UI.toast("Name updated", "success");
+            } catch (err) { UI.toast(err.message, "error"); }
+        }
 
         async function loadProfile() {
             try {

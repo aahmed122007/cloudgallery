@@ -181,10 +181,25 @@ const UI = {
                         <button class="action-btn" onclick="document.getElementById('new-comment').focus()">
                             💬 ${(media.comments || []).length}
                         </button>
-                        ${media.userId === me?.userId
-                            ? `<button class="action-btn danger" onclick="handleDelete('${media.mediaId}')">🗑️ Delete</button>`
-                            : ""}
+                        ${media.userId === me?.userId ? `
+                            <button class="action-btn" onclick="toggleEditForm()">✏️ Edit</button>
+                            <button class="action-btn danger" onclick="handleDelete('${media.mediaId}')">🗑️ Delete</button>
+                        ` : ""}
                     </div>
+                    ${media.userId === me?.userId ? `
+                    <div id="edit-form" style="display:none;padding:14px 0 6px;border-top:1px solid var(--border);margin-top:4px">
+                        <div style="margin-bottom:8px">
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Title</label>
+                            <input id="edit-title" value="${this.escape(media.title)}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;box-sizing:border-box" />
+                        </div>
+                        <div style="margin-bottom:10px">
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Description</label>
+                            <textarea id="edit-desc" rows="2" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;resize:vertical;box-sizing:border-box">${this.escape(media.description || "")}</textarea>
+                        </div>
+                        <button onclick="handleEdit('${media.mediaId}')" style="background:var(--primary);color:#fff;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Save Changes</button>
+                        <button onclick="toggleEditForm()" style="background:none;border:1.5px solid var(--border);color:var(--text-muted);padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-left:8px">Cancel</button>
+                    </div>
+                    ` : ""}
                     <div class="comments-area">
                         <div class="comments-title">Comments</div>
                         <div id="comments-list">${commentsHtml}</div>
@@ -225,6 +240,23 @@ async function handleDelete(mediaId) {
         await API.deleteMedia(mediaId);
         document.getElementById("modal-backdrop").classList.remove("show");
         UI.toast("Photo deleted", "success");
+        document.dispatchEvent(new CustomEvent("media-updated"));
+    } catch (err) { UI.toast(err.message, "error"); }
+}
+
+function toggleEditForm() {
+    const form = document.getElementById("edit-form");
+    if (form) form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+async function handleEdit(mediaId) {
+    const title = document.getElementById("edit-title")?.value.trim();
+    const description = document.getElementById("edit-desc")?.value.trim();
+    if (!title) { UI.toast("Title is required", "error"); return; }
+    try {
+        const updated = await API.updateMedia(mediaId, { title, description });
+        UI.showModal(updated);
+        UI.toast("Changes saved", "success");
         document.dispatchEvent(new CustomEvent("media-updated"));
     } catch (err) { UI.toast(err.message, "error"); }
 }
