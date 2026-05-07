@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile — CloudGallery</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <main class="main">
+            <div class="topbar"></div>
+
+            <div class="profile-header">
+                <div id="avatar" class="avatar-lg"></div>
+                <div class="profile-info">
+                    <h2 id="user-name"></h2>
+                    <p id="user-email"></p>
+                    <p id="user-joined"></p>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom:16px;">My Media</h3>
+            <div id="grid" class="grid"></div>
+            <div id="empty" class="empty-state hidden">
+                <div class="icon">🖼️</div>
+                <p>You haven't uploaded any media yet.</p>
+                <a href="upload.html" class="btn btn-primary" style="margin-top:12px;">Upload media</a>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-backdrop" class="modal-backdrop"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        Auth.requireLogin();
+        UI.renderSidebar("profile");
+        UI.renderTopbar("My Profile");
+
+        const user = Auth.user();
+        document.getElementById("avatar").textContent = UI.initials(user.name);
+        document.getElementById("user-name").textContent = user.name;
+        document.getElementById("user-email").textContent = user.email;
+
+        async function loadProfile() {
+            try {
+                const details = await API.getUser(user.userId);
+                document.getElementById("user-joined").textContent =
+                    `Member since ${new Date(details.createdDate).toLocaleDateString()}`;
+            } catch (e) { /* silent */ }
+
+            try {
+                const { items } = await API.listMedia(user.userId, 100);
+                const grid = document.getElementById("grid");
+                const empty = document.getElementById("empty");
+                grid.innerHTML = "";
+                if (!items.length) {
+                    empty.classList.remove("hidden");
+                    return;
+                }
+                empty.classList.add("hidden");
+                items.forEach(m => grid.appendChild(UI.mediaCard(m, UI.showModal.bind(UI))));
+            } catch (err) {
+                UI.toast(err.message, "error");
+            }
+        }
+
+        loadProfile();
+        document.addEventListener("media-updated", loadProfile);
+    </script>
+</body>
+</html>

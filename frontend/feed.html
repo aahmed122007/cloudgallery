@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feed — CloudGallery</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <main class="main">
+            <div class="topbar"></div>
+
+            <div id="search-info" class="hidden" style="margin-bottom:16px;color:var(--text-muted);"></div>
+
+            <div id="grid" class="grid"></div>
+            <div id="empty" class="empty-state hidden">
+                <div class="icon">🔍</div>
+                <p id="empty-msg">No media found.</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-backdrop" class="modal-backdrop"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        Auth.requireLogin();
+        UI.renderSidebar("feed");
+        UI.renderTopbar("Feed");
+
+        const params = new URLSearchParams(window.location.search);
+        const query = params.get("q");
+        const tag = params.get("tag");
+
+        async function load() {
+            const grid = document.getElementById("grid");
+            const empty = document.getElementById("empty");
+            const info = document.getElementById("search-info");
+            grid.innerHTML = "";
+
+            try {
+                let items = [];
+                if (query || tag) {
+                    info.classList.remove("hidden");
+                    info.textContent = query
+                        ? `Search results for "${query}"`
+                        : `Showing media tagged "${tag}"`;
+                    const res = await API.searchMedia({ q: query, tag });
+                    items = res.items;
+                } else {
+                    const res = await API.listMedia(null, 100);
+                    items = res.items;
+                }
+
+                if (!items.length) {
+                    empty.classList.remove("hidden");
+                    document.getElementById("empty-msg").textContent = (query || tag)
+                        ? "No results match your search."
+                        : "No media yet — be the first to upload!";
+                    return;
+                }
+                empty.classList.add("hidden");
+                items.forEach(m => grid.appendChild(UI.mediaCard(m, UI.showModal.bind(UI))));
+            } catch (err) {
+                UI.toast(err.message, "error");
+            }
+        }
+
+        load();
+        document.addEventListener("media-updated", load);
+
+        // Pre-fill the search box with the current query
+        setTimeout(() => {
+            if (query) {
+                const input = document.getElementById("global-search");
+                if (input) input.value = query;
+            }
+        }, 50);
+    </script>
+</body>
+</html>

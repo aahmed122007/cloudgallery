@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.env
+.env.local
+local.settings.json
+.vscode/
+.DS_Store
+bin/
+obj/
+dist/

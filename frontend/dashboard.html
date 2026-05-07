@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — CloudGallery</title>
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <main class="main">
+            <div class="topbar"></div>
+            <h2 style="margin-bottom:16px;">Recent Uploads</h2>
+            <div id="grid" class="grid"></div>
+            <div id="empty" class="empty-state hidden">
+                <div class="icon">📷</div>
+                <p>No media yet. Be the first to upload!</p>
+                <a href="upload.html" class="btn btn-primary" style="margin-top:12px;">Upload your first media</a>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-backdrop" class="modal-backdrop"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        Auth.requireLogin();
+        UI.renderSidebar("home");
+        UI.renderTopbar("Dashboard");
+
+        async function loadFeed() {
+            try {
+                const { items } = await API.listMedia(null, 30);
+                const grid = document.getElementById("grid");
+                const empty = document.getElementById("empty");
+                grid.innerHTML = "";
+                if (!items.length) {
+                    empty.classList.remove("hidden");
+                    return;
+                }
+                empty.classList.add("hidden");
+                items.forEach(m => grid.appendChild(UI.mediaCard(m, UI.showModal.bind(UI))));
+            } catch (err) {
+                UI.toast(err.message, "error");
+            }
+        }
+
+        loadFeed();
+        document.addEventListener("media-updated", loadFeed);
+    </script>
+</body>
+</html>

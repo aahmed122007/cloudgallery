@@ -1,0 +1,38 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "FUNCTIONS_EXTENSION_VERSION": "~4",
+
+    "COSMOS_ENDPOINT": "https://<your-cosmos>.documents.azure.com:443/",
+    "COSMOS_KEY": "<your-cosmos-key>",
+    "COSMOS_DATABASE": "cloudgallery",
+    "COSMOS_CONTAINER_MEDIA": "media",
+
+    "BLOB_CONNECTION_STRING": "<your-storage-connection-string>",
+    "BLOB_CONTAINER_NAME": "media",
+    "STORAGE_ACCOUNT_NAME": "<your-storage-account-name>",
+
+    "SQL_SERVER": "<your-sql-server>.database.windows.net",
+    "SQL_DATABASE": "cloudgallery",
+    "SQL_USER": "<admin>",
+    "SQL_PASSWORD": "<password>",
+
+    "JWT_SECRET": "<generate-a-long-random-string>",
+    "JWT_EXPIRY": "24h",
+
+    "COMPUTER_VISION_ENDPOINT": "https://<your-vision>.cognitiveservices.azure.com/",
+    "COMPUTER_VISION_KEY": "<your-vision-key>",
+
+    "CONTENT_SAFETY_ENDPOINT": "https://<your-content-safety>.cognitiveservices.azure.com/",
+    "CONTENT_SAFETY_KEY": "<your-content-safety-key>",
+
+    "APPINSIGHTS_INSTRUMENTATIONKEY": "<your-appinsights-key>"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}
