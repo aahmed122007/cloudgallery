@@ -5,8 +5,7 @@
       "type": "blobTrigger",
       "direction": "in",
       "path": "media/{userId}/{mediaFile}",
-      "connection": "BLOB_CONNECTION_STRING",
-      "source": "EventGrid"
+      "connection": "BLOB_CONNECTION_STRING"
     }
   ]
 }

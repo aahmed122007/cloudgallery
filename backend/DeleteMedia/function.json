@@ -5,7 +5,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "methods": ["delete", "options"],
+      "methods": ["get", "put", "delete", "options"],
       "route": "media/{id}"
     },
     {
